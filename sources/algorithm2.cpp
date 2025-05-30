@@ -21,7 +21,7 @@ int HPC_AllgatherMergeCirculant(const void *sendbuf, int sendcount,
   MPI_Comm_size(comm, &size);
   // return sendbuf if size = 1
   if(size == 1){
-    memcpy(recvbuf, sendbuf, sendcount * sizeof(sendtype));
+    memcpy(recvbuf, sendbuf, recvcount * sizeof(tuwtype_t));
     return MPI_SUCCESS;
   }
   // calculate total elements of recvbuf
@@ -62,7 +62,6 @@ int HPC_AllgatherMergeCirculant(const void *sendbuf, int sendcount,
     from = (rank + s_k[k] - eps) % size;
 
     if(eps == 1){
-      // sizes??
       MPI_Sendrecv(W, W_size, MPI_INT, to, tag, T, W_size, MPI_INT, from, tag, comm, MPI_STATUS_IGNORE);
       merge(W, W_size, T, W_size, tmp);
       // adjust pointer 
@@ -76,7 +75,6 @@ int HPC_AllgatherMergeCirculant(const void *sendbuf, int sendcount,
         // send and receive first block
         MPI_Sendrecv(sendbuf, sendcount, MPI_INT, to, tag, W, recvcount, MPI_INT, from, tag, comm, MPI_STATUS_IGNORE);
       }else{
-        // TODO merge W and sendbuf and safe in W_p
         merge((tuwtype_t *)sendbuf, sendcount, W, W_size, W_p);
         MPI_Sendrecv(W_p, W_size + sendcount, MPI_INT, to, tag, T, W_size + sendcount, MPI_INT, from, tag, comm, MPI_STATUS_IGNORE);
         merge(W, W_size, T, W_size + sendcount, tmp);
@@ -93,6 +91,7 @@ int HPC_AllgatherMergeCirculant(const void *sendbuf, int sendcount,
   free(s_k);
   free(W); 
   free(T);
+  free(W_p);
   free(tmp);
   return MPI_SUCCESS;
 }

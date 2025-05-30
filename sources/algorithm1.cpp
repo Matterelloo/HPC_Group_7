@@ -52,6 +52,10 @@ int HPC_AllgatherMergeBruck(const void *sendbuf, int sendcount,
   int size;
   MPI_Comm_size(comm, &size);
   // calculate total elements of recvbuf
+  if(size == 1){
+    memcpy(recvbuf, sendbuf, recvcount * sizeof(tuwtype_t));
+    return MPI_SUCCESS;
+  }
   int buf_size = size * recvcount;
 
   // get rank of process
@@ -66,6 +70,7 @@ int HPC_AllgatherMergeBruck(const void *sendbuf, int sendcount,
 
   //here initialize merged with the first block(treat it as B in the description)
   memcpy(merged, sendbuf, recvcount * sizeof(tuwtype_t));
+  // keep track of the unmerged blocks that are sent for the last round
   memcpy(unmerged, sendbuf, recvcount * sizeof(tuwtype_t));
 
   int q = ceil(log2(size));
@@ -113,7 +118,7 @@ int HPC_AllgatherMergeBruck(const void *sendbuf, int sendcount,
       if(difference >= s_k){
         memcpy(&last_round[num_last_rnd_saved * sendcount], &merged[s_k * sendcount], s_k*sendcount*sizeof(tuwtype_t));
         num_last_rnd_new = num_last_rnd_saved + s_k;
-      }else{
+      }else{ // blocks for last round, coming from the unmerged array
         memcpy(&last_round[num_last_rnd_saved * sendcount], &unmerged[s_k * sendcount], difference*sendcount*sizeof(tuwtype_t));
         num_last_rnd_new = num_last_rnd_saved + difference;
       }
@@ -131,6 +136,7 @@ int HPC_AllgatherMergeBruck(const void *sendbuf, int sendcount,
   }
   memcpy(recvbuf, merged, buf_size * sizeof(tuwtype_t));
   free(merged);
-  free(last_round);                       
+  free(last_round);  
+  free(unmerged);                     
   return MPI_SUCCESS;
 }
